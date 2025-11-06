@@ -3,6 +3,7 @@ import streamlit as st
 import torch
 import pandas as pd
 import torch.nn as nn
+import joblib  # ✅ For loading the saved scaler
 
 # 1️⃣ Define model
 class DietRecommendationModel(nn.Module):
@@ -25,20 +26,21 @@ class DietRecommendationModel(nn.Module):
         x = self.bn1(x)
         x = self.relu1(x)
         x = self.dropout1(x)
-
         x = self.fc2(x)
         x = self.bn2(x)
         x = self.relu2(x)
         x = self.dropout2(x)
-
         x = self.fc3(x)
         return x
 
-# 2️⃣ Load trained model
-input_dim = 11
+# 2️⃣ Load trained model and scaler
+input_dim = 12  # ✅ updated to match input_df columns count
 model = DietRecommendationModel(input_dim=input_dim)
 model.load_state_dict(torch.load("diet_recommendation_model.pth", map_location=torch.device('cpu')))
 model.eval()
+
+# ✅ Load the saved scaler
+scaler = joblib.load("scaler.pkl")
 
 # 3️⃣ Prediction function
 def predict_diet(input_features):
@@ -50,6 +52,7 @@ def predict_diet(input_features):
 
 # 4️⃣ Streamlit UI
 st.title("🍎 Diet Recommendation System")
+
 age = st.number_input("Age", 18, 100, 30)
 height = st.number_input("Height (cm)", 120, 220, 170)
 weight = st.number_input("Weight (kg)", 30, 200, 70)
@@ -72,11 +75,11 @@ input_df = pd.DataFrame({
     "Chronic_Disease":[1 if chronic=="Yes" else 0]
 })
 
-# Apply same scaler used during training
+# ✅ Apply same scaler used during training
 input_scaled = scaler.transform(input_df)
-
 
 if st.button("Predict Diet Quality"):
     pred_idx = predict_diet(input_scaled)
     diet_map = {0: "Poor", 1: "Good", 2: "Excellent", 3: "Average"}
     st.success(f"Recommended Diet Quality: {diet_map[pred_idx]}")
+
