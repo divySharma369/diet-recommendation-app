@@ -7,7 +7,7 @@ import joblib  # ✅ For loading the saved scaler
 
 # 1️⃣ Define model
 class DietRecommendationModel(nn.Module):
-    def __init__(self, input_dim, hidden1=128, hidden2=64, output_dim=4, dropout_rate=0.3):
+    def __init__(self, input_dim=11, hidden1=128, hidden2=64, output_dim=4, dropout_rate=0.3):
         super(DietRecommendationModel, self).__init__()
         self.fc1 = nn.Linear(input_dim, hidden1)
         self.bn1 = nn.BatchNorm1d(hidden1)
@@ -34,8 +34,7 @@ class DietRecommendationModel(nn.Module):
         return x
 
 # 2️⃣ Load trained model and scaler
-input_dim = 12  # ✅ updated to match input_df columns count
-model = DietRecommendationModel(input_dim=input_dim)
+model = DietRecommendationModel(input_dim=11, output_dim=4)
 model.load_state_dict(torch.load("diet_recommendation_model.pth", map_location=torch.device('cpu')))
 model.eval()
 
