@@ -3,7 +3,7 @@ import streamlit as st
 import torch
 import pandas as pd
 import torch.nn as nn
-import joblib  # ✅ For loading the saved scaler
+import joblib
 
 # 1️⃣ Define model
 class DietRecommendationModel(nn.Module):
@@ -34,11 +34,12 @@ class DietRecommendationModel(nn.Module):
         return x
 
 # 2️⃣ Load trained model and scaler
-model = DietRecommendationModel(input_dim=11, output_dim=4)
+input_dim = 11
+output_dim = 4
+model = DietRecommendationModel(input_dim=input_dim, output_dim=output_dim)
 model.load_state_dict(torch.load("diet_recommendation_model.pth", map_location=torch.device('cpu')))
 model.eval()
 
-# ✅ Load the saved scaler
 scaler = joblib.load("scaler.pkl")
 
 # 3️⃣ Prediction function
@@ -63,22 +64,34 @@ chronic = st.selectbox("Chronic Disease", ["Yes", "No"])
 stress = st.number_input("Stress Level (1-10)", 1, 10, 5)
 sleep = st.number_input("Sleep Hours", 1, 12, 7)
 
-input_df = pd.DataFrame({
-    "Age":[age], "Height_cm":[height], "Weight_kg":[weight], "BMI":[bmi],
-    "Stress_Level":[stress], "Sleep_Hours":[sleep],
-    "Smoker_Yes":[1 if smoker=="Yes" else 0],
-    "Exercise_Freq_3-5 times/week":[1 if exercise=="3-5 times/week" else 0],
-    "Exercise_Freq_Daily":[1 if exercise=="Daily" else 0],
-    "Alcohol_Consumption_Moderate":[1 if alcohol=="Moderate" else 0],
-    "Alcohol_Consumption_High":[1 if alcohol=="High" else 0],
-    "Chronic_Disease":[1 if chronic=="Yes" else 0]
+# ✅ Separate numerical & categorical parts
+num_features = pd.DataFrame({
+    "Age":[age],
+    "Height_cm":[height],
+    "Weight_kg":[weight],
+    "BMI":[bmi],
+    "Stress_Level":[stress],
+    "Sleep_Hours":[sleep]
 })
 
-# ✅ Apply same scaler used during training
-input_scaled = scaler.transform(input_df)
+# Scale numerical features only
+num_scaled = scaler.transform(num_features)
+
+# Encode categorical ones manually (same as training)
+cat_features = pd.DataFrame({
+    "Gender": [0],  # optional if fixed
+    "Smoker": [1 if smoker == "Yes" else 0],
+    "Exercise_Freq": [1 if exercise in ["3-5 times/week", "Daily"] else 0],
+    "Alcohol_Consumption": [1 if alcohol in ["Moderate", "High"] else 0],
+    "Chronic_Disease": [1 if chronic == "Yes" else 0]
+})
+
+# Combine numerical + categorical
+final_input = pd.concat(
+    [pd.DataFrame(num_scaled, columns=num_features.columns), cat_features], axis=1
+).values
 
 if st.button("Predict Diet Quality"):
-    pred_idx = predict_diet(input_scaled)
+    pred_idx = predict_diet(final_input)
     diet_map = {0: "Poor", 1: "Good", 2: "Excellent", 3: "Average"}
     st.success(f"Recommended Diet Quality: {diet_map[pred_idx]}")
-
